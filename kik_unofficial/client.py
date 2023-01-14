@@ -685,7 +685,7 @@ class KikClient:
 
                 self._new_user_added_event.clear()
                 self.request_info_of_users(username)
-                if not self._new_user_added_event.wait(5.0):
+                if not self._new_user_added_event.wait(10):
                     raise TimeoutError("Could not get the JID for username {} in time".format(username))
 
             return self.get_jid_from_cache(username)
