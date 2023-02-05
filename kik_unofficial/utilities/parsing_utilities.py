@@ -105,6 +105,48 @@ class ParsingUtilities:
         }
         return final
 
+    # TODO Check file size and resize image accordingly
+    @staticmethod
+    def parse_sticker(file_location: str or bytes or pathlib.Path or io.IOBase) -> dict:
+        '''
+        Converts images to .png and compresses/upscales them so that large image files can be sent after compression.
+        '''
+        preview_out = io.BytesIO()
+        image_out = io.BytesIO()
+        image_out.name = "temp.png"
+
+        file_location = get_file_bytes(file_location)
+        if isinstance(file_location, bytes):
+            file_location = io.BytesIO(file_location)
+
+        img = Image.open(file_location)
+        width, height = img.size
+        larger_dim = height if height > width else width
+        if img.mode != "RGBA":
+            img = img.convert('RGBA')
+        ratio = larger_dim/1600
+        image = img.resize((round(width / ratio), round(height / ratio)))
+        preview_ratio = larger_dim/400
+        preview_image = img.resize((round(width / preview_ratio), round(height / preview_ratio)))
+
+        image.save(image_out, format='PNG')
+        preview_image.save(preview_out, format='PNG')
+
+        size = image_out.tell()
+        final_pre = preview_out.getvalue()
+
+        base64 = ParsingUtilities.read_file_as_base64(final_pre)
+        image_out.close()
+        preview_out.close()
+        preview_image.close()
+        img.close()
+
+        final = {
+            'base64': base64,
+            'size': size,
+        }
+        return final
+
     @staticmethod
     def fix_base64_padding(data):
         return data + '=' * (-len(data) % 4)
