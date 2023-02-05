@@ -1,5 +1,7 @@
 # Kik Bot API #
-This fork just adds in the [Kik-API-Modifications, Made by vilq](https://github.com/VyIq/Kik-API-Modifications)
+This fork just adds in the [Kik-API-Modifications, Made by vilq](https://github.com/VyIq/Kik-API-Modifications), and maybe some other few things from time to time.
+Stored here for ease of use.
+
 Use this library to develop bots for [Kik Messenger](https://www.kik.com) that are essentially automated humans.
 
 It basically lets you do the same things as the offical Kik app by pretending to be a real smartphone client; It communicates with Kik's servers at `talk1110an.kik.com:5223` over a modified version of the [XMPP](https://xmpp.org/about/technology-overview.html) protocol.
@@ -49,7 +51,25 @@ Sending videos or recordings is not supported yet.
 ## More functionality
 Before investigating the format of certain requests/responses, it's worth checking if they are already documented in the [Message Formats](https://github.com/tomer8007/kik-bot-api-unofficial/wiki/Message-Formats) wiki page.
 
-## Troubleshooting
-If you are on Windows and you are unable to install the `lxml` package, use the binary installers from PyPi [here](https://pypi.python.org/pypi/lxml/3.3.5#downloads).
+## Added
 
-If you are using [Termux](https://termux.com/), then use `pkg install libxml2 libxslt` to install `lxml` and `pkg install zlib libpng libjpeg-turbo` to install `pillow` dependencies.
+
+chatting.py Modifications
+Added OutgoingSticker class
+Added OutgoingSponsoredGIFMessage class
+Added OutgoingFakeSystemMessage class
+Added OutgoingFakeStatusMessage class
+Added Tenor dev API key
+Added OutgoingChatIPLogger class
+Added OutgoingGroupIPLogger class
+parsing_utilities.py Modifications
+Added parse_sticker method - Thanks to Kief for insights into parsing <3
+client.py Modifications
+Added send_sponsored_gif_image method
+Added send_sticker method
+Added send_fake_system_message method
+Added send_fake_status_message method
+Added send_ip_logger method
+Added join_group_with_invite_link method
+roster.py Modifications
+Added JoinByInviteLinkRequest class
