@@ -7,6 +7,7 @@ import os
 import requests
 import json
 import base64
+import random
 from io import BytesIO
 from PIL import Image
 from bs4 import BeautifulSoup
@@ -264,6 +265,157 @@ class OutgoingLinkShareEvent(XMPPElement):
         return data.encode()
 
 
+class OutgoingSticker(XMPPElement):
+    """
+    Represents an outgoing sticker message to another kik entity (member or group)
+    """
+    def __init__(self, peer_jid, file_location, forward=True):
+        super().__init__()
+        self.peer_jid = peer_jid
+        self.allow_forward = forward
+        self.parsed = ParsingUtilities.parse_sticker(file_location)
+        self.timestamp = time.time()
+
+    def serialize(self):
+        timestamp = str(int(round(self.timestamp * 1000)))
+        message_type = 'type="groupchat" xmlns="kik:groups"' if 'group' in self.peer_jid else 'type="chat"'
+        data = (
+            '<message {0} to="{1}" id="{2}" cts="{3}">'
+            '<pb></pb>'
+            '<kik push="true" qos="true" timestamp="{3}" />'
+            '<request xmlns="kik:message:receipt" r="true" d="true" />'
+            '<content id="{4}" app-id="com.kik.ext.stickers" v="2">'
+            '<strings>'
+            '<app-name>Stickers</app-name>'
+            '<layout>photo</layout>'
+            '<video-should-autoplay>false</video-should-autoplay>'
+            '<video-should-loop>false</video-should-loop>'
+            '<disallow-save>false</disallow-save>'
+            '<video-should-be-muted>false</video-should-be-muted>'
+            '<allow-forward>{5}</allow-forward>'
+            '</strings>'
+            '<extras />'
+            '<hashes />'
+            '<images>'
+            '<icon>{6}</icon>'
+            '<png-preview>{6}</png-preview>'
+            '</images>'
+            '<uris>'
+            '<uri platform="com.kik.ext.stickers">{7}</uri>'
+            '<uri platform="cards">{7}</uri>'
+            '</uris>'
+            '</content>'
+            '</message>'
+        ).format(message_type, self.peer_jid, self.message_id, timestamp, self.content_id,
+                 str(self.allow_forward).lower(), self.parsed['base64'], 'kik.me/boolean')
+
+        return data.encode()
+
+
+class OutgoingFakeSystemMessage(XMPPElement):
+    """
+    Represents an outgoing fake system message to another kik entity (member or group)
+    """
+    def __init__(self, peer_jid, sysmsg_body, is_group=False):
+        super().__init__()
+        self.peer_jid = peer_jid
+        self.sysmsg_body = sysmsg_body
+        self.is_group = is_group
+
+    def serialize(self):
+        timestamp = str(int(round(time.time() * 1000)))
+        message_type = "chat" if not self.is_group else "groupchat"
+        data = ('<message type="{0}" to="{1}" id="{2}" cts="{3}">'
+                '<kik push="true" qos="true" timestamp="{3}"/>'
+                '<request xmlns="kik:message:receipt" r="true" d="true">'
+                '<sysmsg xmlns="kik:msg:info">{4}</sysmsg>'
+                '</request>'
+                '</message>'
+            ).format(message_type, self.peer_jid, self.message_id, timestamp, self.sysmsg_body)
+        return data.encode()
+
+
+class OutgoingFakeStatusMessage(XMPPElement):
+    """
+    Represents an outgoing fake status message to another kik entity (group)
+    """
+    def __init__(self, peer_jid, status_body, status_jid, super_admin=True, admin=True, dm_disabled=True):
+        super().__init__()
+        self.peer_jid = peer_jid
+        self.status_body = status_body
+        self.status_jid = status_jid
+        self.super_admin = str(super_admin).lower()
+        self.admin = str(admin).lower()
+        self.dm_disabled = str(dm_disabled).lower()
+
+    def serialize(self):
+        # message_type distinction not really needed
+        message_type = 'type="groupchat" xmlns="kik:groups"' if 'group' in self.peer_jid else 'type="chat"'
+        timestamp = str(int(round(time.time() * 1000)))
+        data = ('<message {0} to="{1}" id="{2}" cts="{3}">'
+                '<kik push="true" qos="true" timestamp="{3}"/>'
+                '<request xmlns="kik:message:receipt" r="true" d="true">'
+                '<g jid="{1}">'
+                '<m s="{4}" a="{5}" dmd="{6}">{7}</m>'
+                '</g>'
+                '<status jid="{7}">{8}</status>'
+                '</request>'
+                '</message>'
+                ).format(message_type, self.peer_jid, self.message_id, timestamp,
+                self.super_admin, self.admin, self.dm_disabled, self.status_jid,
+                self.status_body)
+        return data.encode()
+
+
+class OutgoingChatIPLogger(XMPPElement):
+    """
+    Represents an outgoing IP logger to another kik entity (member or group)
+    """
+    def __init__(self, peer_jid, ip_logger_link, is_group=False):
+        super().__init__()
+        self.peer_jid = peer_jid
+        self.ip_logger_link = ip_logger_link
+        self.is_group = is_group
+        # self.icon = icon_src.icon
+
+    def serialize(self):
+        message_type = "chat" if not self.is_group else "groupchat"
+        timestamp = str(int(round(time.time() * 1000)))
+        data = ('<message type="{0}" to="{1}" id="{2}" cts="{3}">'
+                '<pb></pb>'
+                '<kik push="true" qos="true" timestamp="{3}" />'
+                '<request xmlns="kik:message:receipt" r="true" d="true" />'
+                '<content id="{4}" app-id="kik.android" v="2">'
+                '<strings>'
+                '<app-name></app-name>'
+                '<allow-forward>false</allow-forward>'
+                '<app-pkg>kik.android</app-pkg>'
+                '<layout>photo</layout>'
+                '</strings>'
+                '<extras />'
+                '<hashes />'
+                '<images>'
+                '<icon>{5}</icon>'
+                '<preview></preview>'
+                '</images>'
+                '<uris>'
+                '<uri type="image">{6}</uri>'
+                '</uris>'
+                '</content>'
+                '</message>'
+                ).format(message_type, self.peer_jid, self.message_id, timestamp,
+                self.content_id, '76KV', self.ip_logger_link)
+        return data.encode()
+
+
+class OutgoingGroupIPLogger(OutgoingChatIPLogger):
+    """
+    Represents an outgoing IP logger to a group
+    """
+    def __init__(self, group_jid, ip_logger_link):
+        super().__init__(group_jid, ip_logger_link, is_group=True)
+
+
 class IncomingMessageReadEvent(XMPPResponse):
     def __init__(self, data: BeautifulSoup):
         super().__init__(data)
@@ -467,11 +619,91 @@ class OutgoingGIFMessage(XMPPElement):
         return list(packets)
 
     def get_gif_data(self, search_term):
-        apikey = ""  # add api key from https://tenor.com/gifapi
+        apikey = "AB2ELZTOKHYP"  # Tenor dev API key
         if apikey == "":
             raise Exception("A tendor.com API key is required to search for GIFs images. please get one and change it")
 
-        r = requests.get("https://api.tenor.com/v1/search?q=%s&key=%s&limit=1" % (search_term, apikey))
+        r = requests.get("https://api.tenor.com/v1/search?q=%s&key=%s&limit=10" % (search_term, apikey))
+        if r.status_code == 200:
+            gif = json.loads(r.content.decode('ascii'))
+            response = requests.get(gif["results"][0]["media"][0]["nanomp4"]["preview"])
+            img = Image.open(BytesIO(response.content))
+            buffered = BytesIO()
+
+            img.convert("RGB").save(buffered, format="JPEG")
+            img_str = base64.b64encode(buffered.getvalue()).decode('ascii')
+            return img_str, gif["results"][0]["media"][0]
+        else:
+            return ""
+
+
+class OutgoingSponsoredGIFMessage(XMPPElement):
+    """
+	Represents an outgoing sponsored GIF message to another kik entity (member or group)
+	"""
+    def __init__(self, peer_jid, search_term, sponsored_url, sponsored_title, sponsored_action, is_group=True, forward=True):
+        super().__init__()
+        self.peer_jid = peer_jid
+        self.allow_forward = str(forward).lower()
+        self.sponsored_url = sponsored_url
+        self.sponsored_title = sponsored_title
+        self.sponsored_action = sponsored_action
+        self.is_group = is_group
+        self.gif_preview, self.gif_data = self.get_gif_data(search_term)
+
+    def serialize(self):
+        timestamp = str(int(round(time.time() * 1000)))
+        message_type = 'type="groupchat" xmlns="kik:groups"' if 'group' in self.peer_jid else 'type="chat"'
+        data = (
+            '<message {0} to="{1}" id="{2}" cts="{3}">'
+            '<pb></pb>'
+            '<kik push="true" qos="true" timestamp="{3}" />'
+            '<request xmlns="kik:message:receipt" r="true" d="true" />'
+            '<content id="{4}" app-id="com.kik.ext.gif" v="2">'
+            '<strings>'
+            '<app-name>GIF</app-name>'
+            '<layout>video</layout>'
+            '<disallow-save>true</disallow-save>'
+            '<allow-forward>{5}</allow-forward>'
+            '<video-should-loop>true</video-should-loop>'
+            '<video-should-be-muted>true</video-should-be-muted>'
+            '<sponsored-url>{6}</sponsored-url>'
+            '<sponsored-title>{7}</sponsored-title>'
+            '<video-should-autoplay>true</video-should-autoplay>'
+            '<sponsored-action>{8}</sponsored-action>'
+            '</strings>'
+            '<extras />'
+            '<hashes />'
+            '<images>'
+            '<preview>{9}</preview>'
+            '<icon></icon>'
+            '</images>'
+            '<uris>'
+            '<uri type="video" file-content-type="video/mp4" priority="0">{10}</uri>'
+            '<uri type="video" file-content-type="video/tinymp4" priority="0">{11}</uri>'
+            '<uri type="video" file-content-type="video/webm" priority="1">{12}</uri>'
+            '<uri type="video" file-content-type="video/tinywebm" priority="1">{13}</uri>'
+            '<uri type="video" file-content-type="video/nanowebm" priority="1">{14}</uri>'
+            '<uri type="video" file-content-type="video/nanomp4" priority="1">{15}</uri>'
+            '</uris>'
+            '</content>'
+            '</message>'
+        ).format(message_type, self.peer_jid, self.message_id, timestamp, self.content_id, str(self.allow_forward).lower(),
+                    self.sponsored_url, self.sponsored_title, self.sponsored_action,
+                    self.gif_preview, self.gif_data["mp4"]["url"], self.gif_data["tinymp4"]["url"],
+                    self.gif_data["webm"]["url"], self.gif_data["tinywebm"]["url"],
+                    self.gif_data["nanowebm"]["url"], self.gif_data["nanomp4"]["url"])
+
+        packets = [data[s:s + 16384].encode() for s in range(0, len(data), 16384)]
+        return list(packets)
+
+    # This method could be inherited? from OutgoingGIFMessage
+    def get_gif_data(self, search_term):
+        apikey = "AB2ELZTOKHYP"  # Tenor dev API key
+        if apikey == "":
+            raise Exception("A tendor.com API key is required to search for GIFs images. please get one and change it")
+
+        r = requests.get("https://api.tenor.com/v1/search?q=%s&key=%s&limit=10" % (search_term, apikey))
         if r.status_code == 200:
             gif = json.loads(r.content.decode('ascii'))
             response = requests.get(gif["results"][0]["media"][0]["nanomp4"]["preview"])
@@ -515,5 +747,3 @@ class IncomingCardMessage(XMPPResponse):
         self.allow_forward = data.find('allow-forward').text if data.find('allow-forward') else None
         self.icon = data.find('icon').text if data.find('icon') else None
         self.uri = data.find('uri').text if data.find('uri') else None
-
-
