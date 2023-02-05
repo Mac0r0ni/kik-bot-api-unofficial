@@ -4,7 +4,7 @@ from typing import List, Union
 from bs4 import BeautifulSoup
 from kik_unofficial.datatypes.peers import Group, User
 from kik_unofficial.datatypes.xmpp.base_elements import XMPPElement, XMPPResponse
-from kik_unofficial.protobuf.groups.v1 import group_search_service_pb2
+from kik_unofficial.protobuf import group_search_service_pb2
 from kik_unofficial.datatypes.exceptions import KikParsingException
 
 
@@ -203,4 +203,25 @@ class GroupJoinRequest(XMPPElement):
                 '<token>{}</token>'
                 '</g></query></iq>') \
             .format(self.message_id, self.group_jid, self.group_hashtag, join_token)
+        return data.encode()
+
+
+class JoinByInviteLinkRequest(XMPPElement):
+    """
+    Represents a request to join a specific group using an invite link
+    """
+    def __init__(self, group_jid, invite_link):
+        super().__init__()
+        self.group_jid = group_jid
+        self.invite_link = invite_link
+
+    def serialize(self) -> bytes:
+        data = ('<iq type="set" id="{}">'
+                '<query xmlns="kik:groups:admin">'
+                '<g jid="{}" action="join">'
+                '<invite-code type="link">{}</invite-code>'
+                '</g>'
+                '</query>'
+                '</iq>'
+            ).format(self.message_id, self.group_jid, self.invite_link[9:])
         return data.encode()
