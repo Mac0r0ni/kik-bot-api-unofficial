@@ -37,7 +37,6 @@ class KikClient:
         """
         Initializes a connection to Kik servers.
         If you want to automatically login too, use the username and password parameters.
-
         :param callback: a callback instance containing your callbacks implementation.
                          This way you'll get notified whenever certain event happen.
                          Look at the KikClientCallback class for more details
@@ -76,7 +75,6 @@ class KikClient:
         """
         self.kik_connection_thread = Thread(target=self._kik_connection_thread_function, name="Kik Connection")
         self.kik_connection_thread.start()
-       # self.kik_connection_thread.join()
 
     def _on_connection_made(self):
         """
@@ -100,7 +98,6 @@ class KikClient:
         Updates the kik node and creates a new connection to kik servers.
         This new connection will be initiated with another payload which proves
         we have the credentials for a specific user. This is how authentication is done.
-
         :param kik_node: The user's kik node (everything before '@' in JID).
         """
         self.kik_node = kik_node
@@ -112,7 +109,6 @@ class KikClient:
     def login(self, username, password, captcha_result=None):
         """
         Sends a login request with the given kik username and password
-
         :param username: Your kik username or email
         :param password: Your kik password
         :param captcha_result: If this parameter is provided, it is the answer to the captcha given in the previous
@@ -151,7 +147,6 @@ class KikClient:
     def send_chat_message(self, peer_jid: str, message: str, bot_mention_jid=None):
         """
         Sends a text chat message to another person or a group with the given JID/username.
-
         :param peer_jid: The Jabber ID for which to send the message (looks like username_ejs@talk.kik.com)
                          If you don't know the JID of someone, you can also specify a kik username here.
         :param message: The actual message body
@@ -188,7 +183,6 @@ class KikClient:
     def send_read_receipt(self, peer_jid: str, receipt_message_id: str, group_jid=None):
         """
         Sends a read receipt for a previously sent message, to a specific user or group.
-
         :param peer_jid: The JID of the user to which to send the receipt.
         :param receipt_message_id: The message ID that the receipt is sent for
         :param group_jid If the receipt is sent for a message that was sent in a group,
@@ -200,7 +194,6 @@ class KikClient:
     def send_delivered_receipt(self, peer_jid: str, receipt_message_id: str, group_jid: str = None):
         """
         Sends a receipt indicating that a specific message was received, to another person.
-
         :param peer_jid: The other peer's JID to send to receipt to
         :param receipt_message_id: The message ID for which to generate the receipt
         :param group_jid: The group's JID, in case the receipt is sent in a group (None otherwise)
@@ -211,7 +204,6 @@ class KikClient:
     def send_is_typing(self, peer_jid: str, is_typing: bool):
         """
         Updates the 'is typing' status of the bot during a conversation.
-
         :param peer_jid: The JID that the notification will be sent to
         :param is_typing: If true, indicates that we're currently typing, or False otherwise.
         """
@@ -234,11 +226,28 @@ class KikClient:
             log.info("[+] Sending a GIF message to user '{}'...".format(peer_jid))
             return self._send_xmpp_element(chatting.OutgoingGIFMessage(peer_jid, search_term, False))
 
+    # The sponsored_url doesn't link correctly, not sure why but it's cosmetic currently
+    def send_sponsored_gif_image(self, peer_jid: str, search_term, sponsored_url, sponsored_title, sponsored_action):
+        """
+        Sends a sponsored GIF image to another person or a group with the given JID/username.
+        The GIF is taken from tendor.com, based on search keywords.
+        :param peer_jid: The Jabber ID for which to send the message (looks like username_ejs@talk.kik.com
+        :param search_term: The search term to use when searching GIF images on tendor.com
+        :param sponsored_url: The URL that the 'sponsored_action' will link to
+        :param sponsored_title: The title of the GIF (appears on bottom left of GIF)
+        :param sponsored_action: The link to the 'sponsored_url' (appears on bottom right of GIF)
+        """
+        if self.is_group_jid(peer_jid):
+            log.info("[+] Sending a sponsored GIF message to group '{}'...".format(peer_jid))
+            return self._send_xmpp_element(chatting.OutgoingSponsoredGIFMessage(peer_jid, search_term, sponsored_url, sponsored_title, sponsored_action, True))
+        else:
+            log.info("[+] Sending a sponsored GIF message to user '{}'...".format(peer_jid))
+            return self._send_xmpp_element(chatting.OutgoingSponsoredGIFMessage(peer_jid, search_term, sponsored_url, sponsored_title, sponsored_action, False))
+
     def request_info_of_users(self, peer_jids: Union[str, List[str]]):
         """
         Requests basic information (username, JID, display name, picture) of some users.
         When the information arrives, the callback on_peer_info_received() will fire.
-
         :param peer_jids: The JID(s) or the username(s) for which to request the information.
                           If you want to request information for more than one user, supply a list of strings.
                           Otherwise, supply a string
@@ -251,14 +260,63 @@ class KikClient:
     def remove_friend(self, peer_jid):
         return self._send_xmpp_element(roster.RemoveFriendRequest(peer_jid))
 
-    def send_link(self, peer_jid, link, title, text='', app_name='Webpage'):
+    def send_link(self, peer_jid, link, title, text='Hello', app_name='Webpage'):
         return self._send_xmpp_element(chatting.OutgoingLinkShareEvent(peer_jid, link, title, text, app_name))
+
+    def send_sticker(self, peer_jid, file_location):
+        """
+        Sends a sticker chat message to another person or a group with the given JID/username.
+        :param peer_jid: The Jabber ID for which to send the message (looks like username_ejs@talk.kik.com)
+                         If you don't know the JID of someone, you can also specify a kik username here.
+        :param file_location: The path to the image file OR its bytes OR an IOBase object to send.
+        """
+        log.info("[+] Sending a sticker message to '{}'...".format(peer_jid))
+        return self._send_xmpp_element(chatting.OutgoingSticker(peer_jid, file_location))
+
+    def send_fake_system_message(self, peer_jid, sysmsg_body):
+        """
+        Sends a fake system message to another person or a group with the given JID/username.
+        :param peer_jid: The Jabber ID for which to send the message (looks like username_ejs@talk.kik.com)
+                         If you don't know the JID of someone, you can also specify a kik username here.
+        :param sysmsg_body: The message that the fake system message will display.
+        """
+        if self.is_group_jid(peer_jid):
+            log.info("[+] Sending '{}' fake system message to group '{}'...".format(sysmsg_body, peer_jid))
+            return self._send_xmpp_element(chatting.OutgoingFakeSystemMessage(peer_jid, sysmsg_body, True))
+        else:
+            log.info("[+] Sending '{}' fake system message to user '{}'...".format(sysmsg_body, peer_jid))
+            return self._send_xmpp_element(chatting.OutgoingFakeSystemMessage(peer_jid, sysmsg_body, False))
+
+    # Can be sent to a person's direct messages but it won't be visible.
+    def send_fake_status_message(self, peer_jid, status_body, status_jid):
+        """
+        Sends a fake status message to another person or a group with the given JID/username.
+        :param peer_jid: The Jabber ID for which to send the message (looks like username_ejs@talk.kik.com)
+                         If you don't know the JID of someone, you can also specify a kik username here.
+        :param status_body: The message that the fake status message will display.
+        :param status_jid: The Jabber ID for which the status message will display (looks like username_ejs@talk.kik.com).
+        """
+        log.info("[+] Sending '{}' fake status message to group '{}'...".format(status_body, peer_jid))
+        return self._send_xmpp_element(chatting.OutgoingFakeStatusMessage(peer_jid, status_body, status_jid, True, True, True))
+
+    def send_ip_logger(self, peer_jid: str, ip_logger_link):
+        """
+        Sends an IP logger to another person or a group with the given JID/username.
+        :param peer_jid: The Jabber ID for which to send the message (looks like username_ejs@talk.kik.com)
+                         If you don't know the JID of someone, you can also specify a kik username here.
+        :param ip_logger_link: A link to an IP logger.
+        """
+        if self.is_group_jid(peer_jid):
+            log.info("[+] Sending an IP logger to group '{}'...".format(peer_jid))
+            return self._send_xmpp_element(chatting.OutgoingGroupIPLogger(peer_jid, ip_logger_link))
+        else:
+            log.info("[+] Sending an IP logger to user '{}'...".format(peer_jid))
+            return self._send_xmpp_element(chatting.OutgoingChatIPLogger(peer_jid, ip_logger_link))
 
     def xiphias_get_users(self, peer_jids: Union[str, List[str]]):
         """
         Calls the new format xiphias message to request user data such as profile creation date
         and background picture URL.
-
         :param peer_jids: one jid, or a list of jids
         """
         return self._send_xmpp_element(xiphias.UsersRequest(peer_jids))
@@ -266,7 +324,6 @@ class KikClient:
     def xiphias_get_users_by_alias(self, alias_jids: Union[str, List[str]]):
         """
         Like xiphias_get_users, but for aliases instead of jids.
-
         :param alias_jids: one jid, or a list of jids
         """
         return self._send_xmpp_element(xiphias.UsersByAliasRequest(alias_jids))
@@ -278,7 +335,6 @@ class KikClient:
     def change_group_name(self, group_jid: str, new_name: str):
         """
         Changes the a group's name to something new
-
         :param group_jid: The JID of the group whose name should be changed
         :param new_name: The new name to give to the group
         """
@@ -288,7 +344,6 @@ class KikClient:
     def add_peer_to_group(self, group_jid, peer_jid):
         """
         Adds someone to a group
-
         :param group_jid: The JID of the group into which to add a user
         :param peer_jid: The JID of the user to add
         """
@@ -298,7 +353,6 @@ class KikClient:
     def remove_peer_from_group(self, group_jid, peer_jid):
         """
         Kicks someone out of a group
-
         :param group_jid: The group JID from which to remove the user
         :param peer_jid: The JID of the user to remove
         """
@@ -308,7 +362,6 @@ class KikClient:
     def ban_member_from_group(self, group_jid, peer_jid):
         """
         Bans a member from the group
-
         :param group_jid: The JID of the relevant group
         :param peer_jid: The JID of the user to ban
         """
@@ -318,7 +371,6 @@ class KikClient:
     def unban_member_from_group(self, group_jid, peer_jid):
         """
         Undos a ban of someone from a group
-
         :param group_jid: The JID of the relevant group
         :param peer_jid: The JID of the user to un-ban from the gorup
         """
@@ -328,7 +380,6 @@ class KikClient:
     def join_group_with_token(self, group_hashtag, group_jid, join_token):
         """
         Tries to join into a specific group, using a cryptographic token that was received earlier from a search
-
         :param group_hashtag: The public hashtag of the group into which to join (like '#Music')
         :param group_jid: The JID of the same group
         :param join_token: a token that can be extracted in the callback on_group_search_response, after calling
@@ -337,10 +388,18 @@ class KikClient:
         log.info("[+] Trying to join the group '{}' with JID {}".format(group_hashtag, group_jid))
         return self._send_xmpp_element(roster.GroupJoinRequest(group_hashtag, join_token, group_jid))
 
+    def join_group_with_invite_link(self, group_jid, invite_link):
+        """
+        Join into a specific group, using an invite link.
+        :param group_jid: The JID of the same group
+        :param invite_link: An invite code (Looks like 'kik.me/g/{random characters}')
+        """
+        log.info("[+] Joining the group '{}' with JID {}".format(invite_link, group_jid))
+        return self._send_xmpp_element(roster.JoinByInviteLinkRequest(group_jid, invite_link))
+
     def leave_group(self, group_jid):
         """
         Leaves a specific group
-
         :param group_jid: The JID of the group to leave
         """
         log.info("[+] Leaving group {}".format(group_jid))
@@ -349,7 +408,6 @@ class KikClient:
     def promote_to_admin(self, group_jid, peer_jid):
         """
         Turns some group member into an admin
-
         :param group_jid: The group JID for which the member will become an admin
         :param peer_jid: The JID of user to turn into an admin
         """
@@ -359,7 +417,6 @@ class KikClient:
     def demote_admin(self, group_jid, peer_jid):
         """
         Turns an admin of a group into a regular user with no amidships capabilities.
-
         :param group_jid: The group JID in which the rights apply
         :param peer_jid: The admin user to demote
         :return:
@@ -370,7 +427,6 @@ class KikClient:
     def add_members(self, group_jid, peer_jids: Union[str, List[str]]):
         """
         Adds multiple users to a specific group at once
-
         :param group_jid: The group into which to join the users
         :param peer_jids: a list (or a single string) of JIDs to add to the group
         """
@@ -400,7 +456,6 @@ class KikClient:
         """
         Searches for public groups using a query
         Results will be returned using the on_group_search_response() callback
-
         :param search_query: The query that contains some of the desired groups' name.
         """
         log.info("[+] Initiating a search for groups using the query '{}'".format(search_query))
@@ -410,7 +465,6 @@ class KikClient:
         """
         Checks if the given username is available for registration.
         Results are returned in the on_username_uniqueness_received() callback
-
         :param username: The username to check for its existence
         """
         log.info("[+] Checking for Uniqueness of username '{}'".format(username))
@@ -419,7 +473,6 @@ class KikClient:
     def set_profile_picture(self, filename):
         """
         Sets the profile picture of the current user
-
         :param filename: The path to the file OR its bytes OR an IOBase object to set
         """
         log.info("[+] Setting the profile picture to file '{}'".format(filename))
@@ -428,7 +481,6 @@ class KikClient:
     def set_background_picture(self, filename):
         """
         Sets the background picture of the current user
-
         :param filename: The path to the image file OR its bytes OR an IOBase object to set
         """
         log.info("[+] Setting the background picture to filename '{}'".format(filename))
@@ -439,7 +491,6 @@ class KikClient:
         In case a captcha was encountered, solves it using an element ID and a response parameter.
         The stc_id can be extracted from a CaptchaElement, and the captcha result needs to be extracted manually with
         a browser. Please see solve_captcha_wizard() for the steps needed to solve the captcha
-
         :param stc_id: The stc_id from the CaptchaElement that was encountered
         :param captcha_result: The answer to the captcha (which was generated after solved by a human)
         """
@@ -456,7 +507,6 @@ class KikClient:
     def change_display_name(self, first_name, last_name):
         """
         Changes the display name
-
         :param first_name: The first name
         :param last_name: The last name
         """
@@ -466,7 +516,6 @@ class KikClient:
     def change_password(self, new_password, email):
         """
         Changes the login password
-
         :param new_password: The new login password to set for the account
         :param email: The current email of the account
         """
@@ -476,7 +525,6 @@ class KikClient:
     def change_email(self, old_email, new_email):
         """
         Changes the email of the current account
-
         :param old_email: The current email
         :param new_email: The new email to set
         """
@@ -545,7 +593,6 @@ class KikClient:
         """
         The 'k' element appears to be kik's connection-related stanza.
         It lets us know if a connection or a login was successful or not.
-
         :param k_element: The XML element we just received from kik.
         """
         if k_element['ok'] == "1":
@@ -569,7 +616,6 @@ class KikClient:
         We send an iq stanza to request for information, and we receive an iq stanza in response to this request,
         with the same ID attached to it.
         For a great explanation of this stanza: http://slixmpp.readthedocs.io/api/stanza/iq.html
-
         :param iq_element: The iq XML element we just received from kik.
         """
         if iq_element.error and "bad-request" in dir(iq_element.error):
@@ -583,7 +629,6 @@ class KikClient:
         """
         Handles a response that we receive from kik after our initiated request.
         Examples: response to a group search, response to fetching roster, etc.
-
         :param xmlns: The XML namespace that helps us understand what type of response this is
         :param iq_element: The actual XML element that contains the response
         """
@@ -609,7 +654,6 @@ class KikClient:
         an XMPP 'message' in the case of Kik is the actual stanza we receive when someone sends us a message
         (weather groupchat or not), starts typing, stops typing, reads our message, etc.
         Examples: http://slixmpp.readthedocs.io/api/stanza/message.html
-
         :param xmpp_message: The XMPP 'message' element we received
         """
         self._handle_kik_event(xmpp_message)
@@ -617,7 +661,6 @@ class KikClient:
     def _handle_kik_event(self, xmpp_element):
         """
         Handles kik "push" events, like a new message that arrives.
-
         :param xmpp_element: The XML element that we received with the information about the event
         """
         if "xmlns" in xmpp_element.attrs:
@@ -685,7 +728,7 @@ class KikClient:
 
                 self._new_user_added_event.clear()
                 self.request_info_of_users(username)
-                if not self._new_user_added_event.wait(10):
+                if not self._new_user_added_event.wait(5.0):
                     raise TimeoutError("Could not get the JID for username {} in time".format(username))
 
             return self.get_jid_from_cache(username)
