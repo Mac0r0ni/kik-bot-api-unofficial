@@ -54,22 +54,25 @@ Before investigating the format of certain requests/responses, it's worth checki
 ## Added
 
 
-chatting.py Modifications
-Added OutgoingSticker class
-Added OutgoingSponsoredGIFMessage class
-Added OutgoingFakeSystemMessage class
-Added OutgoingFakeStatusMessage class
-Added Tenor dev API key
-Added OutgoingChatIPLogger class
-Added OutgoingGroupIPLogger class
-parsing_utilities.py Modifications
-Added parse_sticker method - Thanks to Kief for insights into parsing <3
-client.py Modifications
-Added send_sponsored_gif_image method
-Added send_sticker method
-Added send_fake_system_message method
-Added send_fake_status_message method
-Added send_ip_logger method
-Added join_group_with_invite_link method
-roster.py Modifications
-Added JoinByInviteLinkRequest class
+## chatting.py Modifications
+- Added OutgoingSticker class
+- Added OutgoingSponsoredGIFMessage class
+- Added OutgoingFakeSystemMessage class
+- Added OutgoingFakeStatusMessage class
+- Added Tenor dev API key
+- Added OutgoingChatIPLogger class
+- Added OutgoingGroupIPLogger class
+
+## parsing_utilities.py Modifications
+- Added parse_sticker method - Thanks to Kief for insights into parsing <3
+
+## client.py Modifications
+- Added send_sponsored_gif_image method
+- Added send_sponsored_gif_image method
+- Added send_sticker method
+- Added send_fake_system_message method
+- Added send_fake_status_message method
+- Added send_ip_logger method
+- Added join_group_with_invite_link method
+## roster.py Modifications
+- Added JoinByInviteLinkRequest class
